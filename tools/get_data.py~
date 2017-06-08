@@ -1,0 +1,15 @@
+import matplotlib.pyplot as plt
+from sklearn import datasets
+
+def prepare_2D_dataset():
+	iris = datasets.load_iris()
+	X = iris.data[:, :2]
+	Y = iris.target
+	return X[0:100], Y[0:100]
+
+if __name__ == "__main__":
+	train_data, train_label = prepare_2D_dataset()
+	plt.figure(1)
+	plt.scatter([i[0] for i in train_data[0:50]], [j[1] for j in train_data[0:50]], c='r', alpha=0.5)
+	plt.scatter([i[0] for i in train_data[50:100]], [j[1] for j in train_data[50:100]], c='b', alpha=0.5)
+	plt.show()
