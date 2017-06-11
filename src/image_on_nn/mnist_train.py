@@ -29,6 +29,7 @@ FLAGS = tf.app.flags.FLAGS
 
 def main(_):
   dataset = mnist_data.load_mnist()
+#  print(dataset.train.images.shape)
   if tf.gfile.Exists(FLAGS.train_dir):
     tf.gfile.DeleteRecursively(FLAGS.train_dir)
   tf.gfile.MakeDirs(FLAGS.train_dir)

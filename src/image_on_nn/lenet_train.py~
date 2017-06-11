@@ -178,12 +178,3 @@ def train(dataset, testset):
       if step % 500 == 0 or (step + 1) == FLAGS.max_steps:
         checkpoint_path = os.path.join(FLAGS.train_dir, 'model.ckpt')
         saver.save(sess, checkpoint_path, global_step=step)
-    '''
-    print("AAAAAAAAAAAAAA")
-    feed_dict_test = mnist.fill_feed_dict(testset,
-                         test_images_placeholder,
-                         test_labels_placeholder,
-                         FLAGS.batch_size)
-    print("BBBBBBBBBBBBBB")
-    print(sess.run(validation_accuracy, feed_dict=feed_dict_test))
-    '''

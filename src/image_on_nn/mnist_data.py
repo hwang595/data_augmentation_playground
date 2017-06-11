@@ -207,8 +207,10 @@ def read_data_sets(train_dir,
   validation_labels = test_labels
   train_images = train_images
   train_labels = train_labels
+  sampled_train_images, sampled_train_labels = down_sample(train_images, train_labels, down_sample_num=25600)
 
-  train = DataSet(train_images, train_labels, dtype=dtype, reshape=reshape)
+#  train = DataSet(train_images, train_labels, dtype=dtype, reshape=reshape)
+  train = DataSet(sampled_train_images, sampled_train_labels, dtype=dtype, reshape=reshape)
   validation = DataSet(validation_images,
                        validation_labels,
                        dtype=dtype,
@@ -217,3 +219,9 @@ def read_data_sets(train_dir,
 
 def load_mnist(train_dir='MNIST-data', worker_id=-1, n_workers=-1):
   return read_data_sets(train_dir, worker_id=worker_id, n_workers=n_workers)
+
+def down_sample(data_set=None, labels=None, down_sample_num=None):
+  down_sample_indices = np.random.randint(low=0, high=data_set.shape[0], size=down_sample_num)
+  down_samples = np.take(data_set, down_sample_indices, axis=0)
+  down_sample_labels = np.take(labels, down_sample_indices)
+  return down_samples, down_sample_labels
