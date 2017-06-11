@@ -70,29 +70,38 @@ def random_crop(batch, crop_shape, padding=None):
 	                                nw:nw + crop_shape[1]]
 	return np.array(new_batch)
 
-def aug_data_set(ori_data, ori_labels, times_expand=1):
+def flip_up_down(batch=None):
+	batch=batch.reshape((batch.shape[0], int(np.sqrt(batch.shape[1])), int(np.sqrt(batch.shape[1]))))
+	for i in range(len(batch)):
+		batch[i] = np.fliplr(batch[i])
+	return batch
+
+def aug_data_set(ori_data, ori_labels, times_expand=1, aug_type=None):
 	aug_data_list = []
 	new_data=ori_data
 	new_label=ori_labels
 	for time_aug in range(times_expand):
-		crop_data = random_crop(ori_data, crop_shape=(28, 28), padding=20)
+		if aug_type == "crop": 
+			crop_data = random_crop(ori_data, crop_shape=(28, 28), padding=1)
+		elif aug_type == "flip_up_down":
+			crop_data = flip_up_down(ori_data)
 		aug_data_list.append(crop_data.reshape(crop_data.shape[0], int(crop_data.shape[1]**2)))
 		new_data = np.concatenate((new_data,aug_data_list[time_aug]),axis=0)
 		new_label = np.concatenate((new_label,ori_labels), axis=0)
 	return new_data, new_label
 
 if __name__ == "__main__":
-	times_expand_list = [i for i in range(1, 23)]
+	times_expand_list = [i for i in range(1, 50)]
 	train_set, train_labels, test_set, test_labels = load_data_set()
 	# extract images whose label is 0 or 1 to do binary classification
 	train_set_binary, train_label_binary, test_set_binary, test_label_binary = extract_for_binary(train_set, train_labels, test_set, test_labels)
-	sample_data, sample_labels=down_sample(train_set_binary, train_label_binary, down_sample_num=500)
+	sample_data, sample_labels=down_sample(train_set_binary, train_label_binary, down_sample_num=1000)
 	# test data augmentation
 	acc_list = []
 	for i in times_expand_list:
-		new_data, new_labels = aug_data_set(sample_data, sample_labels, times_expand=i)
+		new_data, new_labels = aug_data_set(sample_data, sample_labels, times_expand=i, aug_type="flip_up_down")
 		print(new_data.shape)
-		perceptron_classifier = LogisticRegression()
+		perceptron_classifier = LogisticRegression(max_iter=500)
 		perceptron_classifier.fit(new_data, new_labels)
 		accuracy = perceptron_classifier.score(test_set_binary, test_label_binary)
 		acc_list.append(accuracy)

@@ -69,9 +69,18 @@ def random_crop(batch, crop_shape, padding=None):
 	                                nw:nw + crop_shape[1]]
 	return np.array(new_batch)
 
+def flip_up_down(batch=None):
+	batch=batch.reshape((batch.shape[0], int(np.sqrt(batch.shape[1])), int(np.sqrt(batch.shape[1]))))
+	for i in range(len(batch)):
+		batch[i] = np.fliplr(batch[i])
+	return batch
+
 if __name__ == "__main__":
 	train_set, train_labels, test_set, test_labels = load_data_set()
-	aug_train_set=random_crop(train_set, (28,28), padding=2)
-	aug_train_set=aug_train_set.reshape(aug_train_set.shape[0], int(aug_train_set.shape[1]**2))
+	new_train_set = flip_up_down(train_set)
+	aug_train_set=new_train_set.reshape(new_train_set.shape[0], int(new_train_set.shape[1]**2))
+	print(aug_train_set.shape)
+#	aug_train_set=random_crop(train_set, (28,28), padding=2)
+#	aug_train_set=aug_train_set.reshape(aug_train_set.shape[0], int(aug_train_set.shape[1]**2))
 	new_data_set=np.concatenate((train_set,aug_train_set),axis=0)
 	print(new_data_set.shape)
