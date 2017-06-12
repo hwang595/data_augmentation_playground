@@ -33,6 +33,7 @@ from mnist import *
 import time
 
 import numpy
+import random
 from scipy.ndimage.interpolation import map_coordinates
 from scipy.ndimage.filters import gaussian_filter
 
@@ -207,10 +208,11 @@ def read_data_sets(train_dir,
   validation_labels = test_labels
   train_images = train_images
   train_labels = train_labels
-  sampled_train_images, sampled_train_labels = down_sample(train_images, train_labels, down_sample_num=25600)
-
+  sampled_train_images, sampled_train_labels = down_sample(train_images, train_labels, down_sample_num=1024)
+  new_data, new_labels = aug_data_set(sampled_train_images, sampled_train_labels, times_expand=1)
 #  train = DataSet(train_images, train_labels, dtype=dtype, reshape=reshape)
-  train = DataSet(sampled_train_images, sampled_train_labels, dtype=dtype, reshape=reshape)
+#  train = DataSet(sampled_train_images, sampled_train_labels, dtype=dtype, reshape=reshape)
+  train = DataSet(new_data, new_labels, dtype=dtype, reshape=reshape)
   validation = DataSet(validation_images,
                        validation_labels,
                        dtype=dtype,
@@ -225,3 +227,31 @@ def down_sample(data_set=None, labels=None, down_sample_num=None):
   down_samples = np.take(data_set, down_sample_indices, axis=0)
   down_sample_labels = np.take(labels, down_sample_indices)
   return down_samples, down_sample_labels
+
+def aug_data_set(ori_data, ori_labels, times_expand=1):
+  aug_data_list = []
+  new_data=ori_data
+  new_label=ori_labels
+  for time_aug in range(times_expand):
+    crop_data = random_crop(ori_data, crop_shape=(28, 28), padding=1)
+    aug_data_list.append(crop_data)
+    new_data = np.concatenate((new_data,aug_data_list[time_aug]),axis=0)
+    new_label = np.concatenate((new_label,ori_labels), axis=0)
+  return new_data, new_label
+
+def random_crop(batch, crop_shape, padding=None):
+  oshape = np.shape(batch[0])
+  if padding:
+    oshape = (oshape[0] + 2*padding, oshape[1] + 2*padding)
+  new_batch = []
+  npad = ((padding, padding), (padding, padding), (0, 0))
+  for i in range(len(batch)):
+    new_batch.append(batch[i])
+    if padding:
+      new_batch[i] = np.lib.pad(batch[i], pad_width=npad,
+                          mode='constant', constant_values=0)
+    nh = random.randint(0, oshape[0] - crop_shape[0])
+    nw = random.randint(0, oshape[1] - crop_shape[1])
+    new_batch[i] = new_batch[i][nh:nh + crop_shape[0],
+                              nw:nw + crop_shape[1]]
+  return np.array(new_batch)
