@@ -166,8 +166,8 @@ def prepare_train_data(padding_size):
     pad_width = ((0, 0), (padding_size, padding_size), (padding_size, padding_size), (0, 0))
     data = np.pad(data, pad_width=pad_width, mode='constant', constant_values=0)
     sampled_train_images, sampled_train_labels = down_sample(data, label, down_sample_num=1024)
-#    return sampled_train_images, sampled_train_labels
-    return data, label
+    return sampled_train_images, sampled_train_labels
+#    return data, label
 
 def read_validation_data():
     '''
