@@ -43,6 +43,7 @@ import data_preparation.cifar10_input as cifar10
 
 tf.logging.set_verbosity(tf.logging.INFO)
 FLAGS = tf.app.flags.FLAGS
+MOMENTUM = 0.9
 
 tf.app.flags.DEFINE_string('train_dir', '/tmp/imagenet_train',
                            """Directory where to write event logs """
@@ -88,9 +89,9 @@ tf.app.flags.DEFINE_string('pretrained_model_checkpoint_path', '',
 # With 8 Tesla K40's and a batch size = 256, the following setup achieves
 # precision@1 = 73.5% after 100 hours and 100K steps (20 epochs).
 # Learning rate decay factor selected from http://arxiv.org/abs/1404.5997.
-tf.app.flags.DEFINE_float('initial_learning_rate', 0.001,
+tf.app.flags.DEFINE_float('initial_learning_rate', 0.05,
                           """Initial learning rate.""")
-tf.app.flags.DEFINE_float('num_epochs_per_decay', 1.0,
+tf.app.flags.DEFINE_float('num_epochs_per_decay', 2.0,
                           """Epochs after which learning rate decays.""")
 tf.app.flags.DEFINE_float('learning_rate_decay_factor', 0.95,
                           """Learning rate decay factor.""")
@@ -126,7 +127,8 @@ def train(training_set, training_labels):
                                     staircase=True)
 
     # Create an optimizer that performs gradient descent.
-    opt = tf.train.AdamOptimizer(lr)
+    #opt = tf.train.AdamOptimizer(lr)
+    opt = tf.train.MomentumOptimizer(lr, MOMENTUM)
 
     #fetch the data batch from training set
     images, labels = cifar10.placeholder_inputs(FLAGS.batch_size)
@@ -189,7 +191,7 @@ def train(training_set, training_labels):
       assert not np.isnan(loss_value), 'Model diverged with loss = NaN'
 
       examples_per_sec = FLAGS.batch_size / float(duration)
-      format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
+      format_str = ('%s: step %d, loss = %.8f (%.1f examples/sec; %.3f '
                     'sec/batch); acc=%.4f')
       tf.logging.info(format_str % (datetime.now(), step, loss_value,
                           examples_per_sec, duration, acc))
