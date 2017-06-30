@@ -135,7 +135,10 @@ def train(training_set, training_labels):
     logits = resnet.inference(images, FLAGS.num_residual_blocks, reuse=False)
 
     #calc the loss and gradients
-    total_loss = resnet.loss(logits, labels)
+    loss = resnet.loss(logits, labels)
+    regu_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+    total_loss = tf.add_n([loss] + regu_losses)
+
     grads = opt.compute_gradients(total_loss)
 
     # Apply the gradients to adjust the shared variables.
