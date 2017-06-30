@@ -103,13 +103,13 @@ def do_eval(saver,
                                        labels_placeholder)
       acc, loss = sess.run([val_acc, val_loss], feed_dict=feed_dict)
 
-      print('Num examples: %d  Precision @ 1: %f Loss: %f Time: %f' %
+      print('Num examples: %d  Top-1-Error @ 1: %f Loss: %f Time: %f' %
             (num_examples, acc, loss, time.time() - start_time))
       sys.stdout.flush()
 
       # Summarize accuracy
       summary = tf.Summary()
-      summary.value.add(tag="Validation Accuracy", simple_value=float(acc))
+      summary.value.add(tag="Top-1-Err", simple_value=float(acc))
       summary.value.add(tag="Validation Loss", simple_value=float(loss))
       writer.add_summary(summary, global_step)
     return global_step
@@ -120,12 +120,16 @@ def do_eval(saver,
 
 def evaluate(validation_set, validation_labels):
   """Evaluate model on Dataset for a number of steps."""
-  with tf.Graph().as_default(), tf.device('/cpu:0'):
+  with tf.Graph().as_default():
     # Graph creation
     batch_size = validation_set.shape[0]
     images_placeholder, labels_placeholder = cifar10.placeholder_inputs(batch_size)
     logits = resnet.inference(images_placeholder, FLAGS.num_residual_blocks, reuse=False)
-    validation_accuracy = tf.reduce_sum(resnet.evaluation(logits, labels_placeholder)) / tf.constant(batch_size)
+    predictions = tf.nn.softmax(logits)
+    in_top1 = tf.to_float(tf.nn.in_top_k(predictions, labels_placeholder, k=1))
+    num_correct = tf.reduce_sum(in_top1)
+    validation_accuracy=(batch_size - num_correct) / float(batch_size)
+  #  validation_accuracy = tf.reduce_sum(resnet.evaluation(logits, labels_placeholder)) / tf.constant(batch_size)
     validation_loss = resnet.loss(logits, labels_placeholder)
 
     # Reference to sess and saver
