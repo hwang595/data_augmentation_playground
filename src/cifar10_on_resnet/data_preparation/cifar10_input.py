@@ -17,6 +17,9 @@ full_data_dir = 'cifar10_data/cifar-10-batches-py/data_batch_'
 vali_dir = 'cifar10_data/cifar-10-batches-py/test_batch'
 DATA_URL = 'http://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz'
 
+FLAGS = tf.app.flags.FLAGS
+tf.app.flags.DEFINE_integer('padding_size', 2, '''In data augmentation, layers of zero padding on
+each side of the image''')
 
 IMG_WIDTH = 32
 IMG_HEIGHT = 32
@@ -141,7 +144,7 @@ def random_crop_and_flip(batch_data, padding_size):
         cropped_batch[i, ...] = batch_data[i, ...][x_offset:x_offset+IMG_HEIGHT,
                       y_offset:y_offset+IMG_WIDTH, :]
 
-#        cropped_batch[i, ...] = horizontal_flip(image=cropped_batch[i, ...], axis=1)
+        cropped_batch[i, ...] = horizontal_flip(image=cropped_batch[i, ...], axis=1)
 
     return cropped_batch
 
@@ -165,7 +168,7 @@ def prepare_train_data(padding_size):
     data = whitening_image(data)
     pad_width = ((0, 0), (padding_size, padding_size), (padding_size, padding_size), (0, 0))
     data = np.pad(data, pad_width=pad_width, mode='constant', constant_values=0)
-    sampled_train_images, sampled_train_labels = down_sample(data, label, down_sample_num=1024)
+#    sampled_train_images, sampled_train_labels = down_sample(data, label, down_sample_num=1024)
 #    return sampled_train_images, sampled_train_labels
     return data, label
 
@@ -197,10 +200,11 @@ def placeholder_inputs(batch_size):
   labels_placeholder = tf.placeholder(tf.int64, shape=(batch_size,))
   return images_placeholder, labels_placeholder
 
-def fill_feed_dict(all_data, all_labels, image_placeholder, label_placeholder, batch_size, local_data_batch_idx, epoch_counter):
+def fill_feed_dict(all_data, all_labels, image_placeholder, label_placeholder, 
+                    batch_size, local_data_batch_idx, epoch_counter, lr, lr_placeholder):
     train_batch_data, train_batch_labels, local_data_batch_idx, epoch_counter = generate_augment_train_batch(
                         all_data, all_labels, batch_size, local_data_batch_idx, epoch_counter)
-    feed_dict = {image_placeholder: train_batch_data, label_placeholder: train_batch_labels}
+    feed_dict = {image_placeholder: train_batch_data, label_placeholder: train_batch_labels, lr_placeholder: lr}
     return epoch_counter, local_data_batch_idx, feed_dict
 
 def fill_feed_dict_val(val_set, val_labels, images_pl, labels_pl):
@@ -259,7 +263,7 @@ def generate_augment_train_batch(train_data, train_labels, train_batch_size, loc
       assert train_batch_size <= num_of_instances
     end = local_data_batch_idx
     train_batch = train_data[start:end]
-#    train_batch = random_crop_and_flip(train_batch_tmp, padding_size=FLAGS.padding_size)
+    train_batch = whitening_image(random_crop_and_flip(train_batch_tmp, padding_size=FLAGS.padding_size))
     batch_labels = train_labels[start:end]
 #    tf.logging.info("Batch shapes %s" % str(train_batch.shape))
 #    tf.logging.info("Standardized batch shapes %s" % str(whitening_image(train_batch).shape))

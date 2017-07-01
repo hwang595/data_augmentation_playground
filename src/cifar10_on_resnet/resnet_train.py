@@ -95,6 +95,11 @@ tf.app.flags.DEFINE_float('num_epochs_per_decay', 2.0,
                           """Epochs after which learning rate decays.""")
 tf.app.flags.DEFINE_float('learning_rate_decay_factor', 0.95,
                           """Learning rate decay factor.""")
+tf.app.flags.DEFINE_integer('decay_step0', 40000, '''At which step to decay the learning rate''')
+tf.app.flags.DEFINE_integer('decay_step1', 60000, '''At which step to decay the learning rate''')
+tf.app.flags.DEFINE_float('init_lr', 0.1, '''Initial learning rate''')
+tf.app.flags.DEFINE_integer('padding_size', 2, '''In data augmentation, layers of zero padding on
+each side of the image''')
 
 # this hyper parameter is only used for resnet
 tf.app.flags.DEFINE_integer('num_residual_blocks', 5, '''How many residual blocks do you want''')
@@ -112,23 +117,26 @@ def train(training_set, training_labels):
     global_step = tf.Variable(0, name="global_step", trainable=False)
     
     # get num of examples in training set
-    dataset_num_examples = training_set.shape[0]
+#    dataset_num_examples = training_set.shape[0]
 
     # Calculate the learning rate schedule.
-    num_batches_per_epoch = (dataset_num_examples / FLAGS.batch_size)
+#    num_batches_per_epoch = (dataset_num_examples / FLAGS.batch_size)
 
-    decay_steps = int(num_batches_per_epoch * FLAGS.num_epochs_per_decay)
+#    decay_steps = int(num_batches_per_epoch * FLAGS.num_epochs_per_decay)
 
     # Decay the learning rate exponentially based on the number of steps.
+    '''
     lr = tf.train.exponential_decay(FLAGS.initial_learning_rate,
                                     global_step,
                                     decay_steps,
                                     FLAGS.learning_rate_decay_factor,
                                     staircase=True)
+    '''
+    lr_placeholder = tf.placeholder(dtype=tf.float32, shape=[])
 
     # Create an optimizer that performs gradient descent.
     #opt = tf.train.AdamOptimizer(lr)
-    opt = tf.train.MomentumOptimizer(lr, MOMENTUM)
+    opt = tf.train.MomentumOptimizer(learning_rate=lr_placeholder, MOMENTUM)
 
     #fetch the data batch from training set
     images, labels = cifar10.placeholder_inputs(FLAGS.batch_size)
@@ -184,7 +192,8 @@ def train(training_set, training_labels):
                 labels, 
                 FLAGS.batch_size, 
                 local_data_batch_idx, 
-                epoch_counter)
+                epoch_counter,
+                FLAGS.init_lr, lr_placeholder)
 
       start_time = time.time()
       _, loss_value, acc = sess.run([train_op, total_loss, validation_accuracy], feed_dict=feed_dict)
@@ -199,6 +208,9 @@ def train(training_set, training_labels):
       tf.logging.info(format_str % (datetime.now(), step, loss_value,
                           examples_per_sec, duration, acc))
       tf.logging.info("Data batch index: %s, Current epoch idex: %s" % (str(epoch_counter), str(local_data_batch_idx)))
+      
+      if step == FLAGS.decay_step0 or step == FLAGS.decay_step1:
+        FLAGS.init_lr = 0.1 * FLAGS.init_lr
 
       if step % 500 == 0 or (step + 1) == FLAGS.max_steps:
         checkpoint_path = os.path.join(FLAGS.train_dir, 'model.ckpt')
