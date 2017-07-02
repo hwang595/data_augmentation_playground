@@ -23,8 +23,6 @@ import data_preparation.cifar10_input as cifar10
 import resnet_train
 
 FLAGS = tf.app.flags.FLAGS
-tf.app.flags.DEFINE_integer('padding_size', 2, '''In data augmentation, layers of zero padding on
-each side of the image''')
 
 def main(_):
   cifar10.maybe_download_and_extract()

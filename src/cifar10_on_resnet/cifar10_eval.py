@@ -120,7 +120,7 @@ def do_eval(saver,
 
 def evaluate(validation_set, validation_labels):
   """Evaluate model on Dataset for a number of steps."""
-  with tf.Graph().as_default():
+  with tf.Graph().as_default(), tf.device('/cpu:0'):
     # Graph creation
     batch_size = validation_set.shape[0]
     images_placeholder, labels_placeholder = cifar10.placeholder_inputs(batch_size)

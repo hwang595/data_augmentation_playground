@@ -98,8 +98,6 @@ tf.app.flags.DEFINE_float('learning_rate_decay_factor', 0.95,
 tf.app.flags.DEFINE_integer('decay_step0', 40000, '''At which step to decay the learning rate''')
 tf.app.flags.DEFINE_integer('decay_step1', 60000, '''At which step to decay the learning rate''')
 tf.app.flags.DEFINE_float('init_lr', 0.1, '''Initial learning rate''')
-tf.app.flags.DEFINE_integer('padding_size', 2, '''In data augmentation, layers of zero padding on
-each side of the image''')
 
 # this hyper parameter is only used for resnet
 tf.app.flags.DEFINE_integer('num_residual_blocks', 5, '''How many residual blocks do you want''')
@@ -212,6 +210,6 @@ def train(training_set, training_labels):
       if step == FLAGS.decay_step0 or step == FLAGS.decay_step1:
         FLAGS.init_lr = 0.1 * FLAGS.init_lr
 
-      if step % 500 == 0 or (step + 1) == FLAGS.max_steps:
+      if step % 5000 == 0 or (step + 1) == FLAGS.max_steps:
         checkpoint_path = os.path.join(FLAGS.train_dir, 'model.ckpt')
         saver.save(sess, checkpoint_path, global_step=step)
