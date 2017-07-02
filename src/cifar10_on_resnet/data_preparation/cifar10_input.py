@@ -263,7 +263,7 @@ def generate_augment_train_batch(train_data, train_labels, train_batch_size, loc
       assert train_batch_size <= num_of_instances
     end = local_data_batch_idx
     train_batch = train_data[start:end]
-    train_batch = whitening_image(random_crop_and_flip(train_batch_tmp, padding_size=FLAGS.padding_size))
+#    train_batch = whitening_image(random_crop_and_flip(train_batch_tmp, padding_size=FLAGS.padding_size))
     batch_labels = train_labels[start:end]
 #    tf.logging.info("Batch shapes %s" % str(train_batch.shape))
 #    tf.logging.info("Standardized batch shapes %s" % str(whitening_image(train_batch).shape))

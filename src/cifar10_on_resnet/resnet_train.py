@@ -89,7 +89,7 @@ tf.app.flags.DEFINE_string('pretrained_model_checkpoint_path', '',
 # With 8 Tesla K40's and a batch size = 256, the following setup achieves
 # precision@1 = 73.5% after 100 hours and 100K steps (20 epochs).
 # Learning rate decay factor selected from http://arxiv.org/abs/1404.5997.
-tf.app.flags.DEFINE_float('initial_learning_rate', 0.05,
+tf.app.flags.DEFINE_float('initial_learning_rate', 0.1,
                           """Initial learning rate.""")
 tf.app.flags.DEFINE_float('num_epochs_per_decay', 2.0,
                           """Epochs after which learning rate decays.""")
@@ -134,7 +134,7 @@ def train(training_set, training_labels):
 
     # Create an optimizer that performs gradient descent.
     #opt = tf.train.AdamOptimizer(lr)
-    opt = tf.train.MomentumOptimizer(learning_rate=lr_placeholder, MOMENTUM)
+    opt = tf.train.MomentumOptimizer(lr_placeholder, MOMENTUM)
 
     #fetch the data batch from training set
     images, labels = cifar10.placeholder_inputs(FLAGS.batch_size)
@@ -210,6 +210,6 @@ def train(training_set, training_labels):
       if step == FLAGS.decay_step0 or step == FLAGS.decay_step1:
         FLAGS.init_lr = 0.1 * FLAGS.init_lr
 
-      if step % 5000 == 0 or (step + 1) == FLAGS.max_steps:
+      if step % 2000 == 0 or (step + 1) == FLAGS.max_steps:
         checkpoint_path = os.path.join(FLAGS.train_dir, 'model.ckpt')
         saver.save(sess, checkpoint_path, global_step=step)
