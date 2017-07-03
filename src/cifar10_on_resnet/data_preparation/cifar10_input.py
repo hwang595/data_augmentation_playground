@@ -148,6 +148,18 @@ def random_crop_and_flip(batch_data, padding_size):
 
     return cropped_batch
 
+def aug_data_set(ori_data, ori_labels, times_expand=1):
+    aug_data_list = []
+    new_data=ori_data
+    new_label=ori_labels
+    for time_aug in range(times_expand):
+        crop_data = random_crop(ori_data, crop_shape=(32, 32), padding=2)
+        exit()      
+        aug_data_list.append(crop_data)
+        new_data = np.concatenate((new_data,aug_data_list[time_aug]),axis=0)
+    new_label = np.concatenate((new_label,ori_labels), axis=0)
+    return new_data, new_label
+
 def down_sample(data_set=None, labels=None, down_sample_num=None):
     down_sample_indices = np.random.randint(low=0, high=data_set.shape[0], size=down_sample_num)
     down_samples = np.take(data_set, down_sample_indices, axis=0)
@@ -166,11 +178,13 @@ def prepare_train_data(padding_size):
         path_list.append(full_data_dir + str(i))
     data, label = read_in_all_images(path_list, is_random_label=TRAIN_RANDOM_LABEL)
     data = whitening_image(data)
-    pad_width = ((0, 0), (padding_size, padding_size), (padding_size, padding_size), (0, 0))
-    data = np.pad(data, pad_width=pad_width, mode='constant', constant_values=0)
-#    sampled_train_images, sampled_train_labels = down_sample(data, label, down_sample_num=1024)
+#    pad_width = ((0, 0), (padding_size, padding_size), (padding_size, padding_size), (0, 0))
+#    data = np.pad(data, pad_width=pad_width, mode='constant', constant_values=0)
+    sampled_train_images, sampled_train_labels = down_sample(data, label, down_sample_num=1024)
+    train_set_new, train_labels_new = aug_data_set(sample_data, sample_labels, times_expand=68)
+    return train_set_new, train_labels_new
 #    return sampled_train_images, sampled_train_labels
-    return data, label
+#    return data, label
 
 def read_validation_data():
     '''
