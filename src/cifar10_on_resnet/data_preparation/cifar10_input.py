@@ -153,8 +153,7 @@ def aug_data_set(ori_data, ori_labels, times_expand=1):
     new_data=ori_data
     new_label=ori_labels
     for time_aug in range(times_expand):
-        crop_data = random_crop(ori_data, crop_shape=(32, 32), padding=2)
-        exit()      
+        crop_data = random_crop(ori_data, crop_shape=(32, 32), padding=2)   
         aug_data_list.append(crop_data)
         new_data = np.concatenate((new_data,aug_data_list[time_aug]),axis=0)
     new_label = np.concatenate((new_label,ori_labels), axis=0)
