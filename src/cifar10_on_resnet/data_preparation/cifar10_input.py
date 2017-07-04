@@ -10,7 +10,6 @@ import numpy as np
 import cPickle
 import os
 import tensorflow as tf
-from skimage.util import random_noise
 import random
 #import cv2
 
@@ -175,6 +174,7 @@ def add_noise_wrt_distance(batch, crop_shape, padding=None):
     oshape = (oshape[0] + 2*padding, oshape[1] + 2*padding)
   new_batch = []
   npad = ((padding, padding), (padding, padding), (0, 0))
+  var_list = []
   for i in range(len(batch)):
 #    batch[i] = normalize(batch[i])
     new_batch.append(batch[i])
@@ -186,8 +186,15 @@ def add_noise_wrt_distance(batch, crop_shape, padding=None):
     new_batch[i] = new_batch[i][nh:nh + crop_shape[0],
                               nw:nw + crop_shape[1]]
     r = np.linalg.norm(np.subtract(batch[i], new_batch[i]))
-    gaussian_noise = np.random.normal(0, r, (batch[i].shape[0], batch[i].shape[1], batch[i].shape[2]))
+    var_list.append(r)
+  std_var_list = np.array(var_list) / np.linalg.norm(np.array(var_list))
+  for i in range(len(std_var_list)):
+    std_var_list[i] = std_var_list[i] * 10
+  for i in range(len(batch)):
+    gaussian_noise = np.random.normal(0, std_var_list[i], (batch[i].shape[0], batch[i].shape[1], batch[i].shape[2]))
     new_batch[i] = new_batch[i] + gaussian_noise
+#    gaussian_noise = np.random.normal(0, r, (batch[i].shape[0], batch[i].shape[1], batch[i].shape[2]))
+#    new_batch[i] = new_batch[i] + gaussian_noise
   return np.array(new_batch)
 
 def aug_data_set(ori_data, ori_labels, times_expand=1):
@@ -195,7 +202,7 @@ def aug_data_set(ori_data, ori_labels, times_expand=1):
     new_data=ori_data
     new_label=ori_labels
     for time_aug in range(times_expand):
-        crop_data = random_crop(ori_data, crop_shape=(32, 32), padding=1)   
+        crop_data = add_noise_wrt_distance(ori_data, crop_shape=(32, 32), padding=1)   
         aug_data_list.append(crop_data)
         new_data = np.concatenate((new_data,aug_data_list[time_aug]),axis=0)
         new_label = np.concatenate((new_label,ori_labels), axis=0)
