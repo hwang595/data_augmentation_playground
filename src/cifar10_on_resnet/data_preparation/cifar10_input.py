@@ -10,6 +10,7 @@ import numpy as np
 import cPickle
 import os
 import tensorflow as tf
+from skimage.util import random_noise
 import random
 #import cv2
 
@@ -164,7 +165,29 @@ def random_crop(batch, crop_shape, padding=None):
     nw = random.randint(0, oshape[1] - crop_shape[1])
     new_batch[i] = new_batch[i][nh:nh + crop_shape[0],
                               nw:nw + crop_shape[1]]
-#    r = np.linalg.norm(np.subtract(batch[i], new_batch[i]))
+    r = np.linalg.norm(np.subtract(batch[i], new_batch[i]))
+    new_batch[i]=random_noise(img, mode='gaussian', var=r)
+  return np.array(new_batch)
+
+def add_noise_wrt_distance(batch, crop_shape, padding=None):
+  oshape = np.shape(batch[0])
+  if padding:
+    oshape = (oshape[0] + 2*padding, oshape[1] + 2*padding)
+  new_batch = []
+  npad = ((padding, padding), (padding, padding), (0, 0))
+  for i in range(len(batch)):
+#    batch[i] = normalize(batch[i])
+    new_batch.append(batch[i])
+    if padding:
+      new_batch[i] = np.lib.pad(batch[i], pad_width=npad,
+                          mode='constant', constant_values=0)
+    nh = random.randint(0, oshape[0] - crop_shape[0])
+    nw = random.randint(0, oshape[1] - crop_shape[1])
+    new_batch[i] = new_batch[i][nh:nh + crop_shape[0],
+                              nw:nw + crop_shape[1]]
+    r = np.linalg.norm(np.subtract(batch[i], new_batch[i]))
+    gaussian_noise = np.random.normal(0, r, (batch[i].shape[0], batch[i].shape[1], batch[i].shape[2]))
+    new_batch[i] = new_batch[i] + gaussian_noise
   return np.array(new_batch)
 
 def aug_data_set(ori_data, ori_labels, times_expand=1):
