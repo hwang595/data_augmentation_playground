@@ -209,7 +209,7 @@ def read_data_sets(train_dir,
   train_images = train_images
   train_labels = train_labels
   sampled_train_images, sampled_train_labels = down_sample(train_images, train_labels, down_sample_num=1024)
-  new_data, new_labels = aug_data_set(sampled_train_images, sampled_train_labels, times_expand=1)
+  new_data, new_labels = aug_data_set(sampled_train_images, sampled_train_labels, times_expand=1, aug_type='line_among_labels')
 #  train = DataSet(train_images, train_labels, dtype=dtype, reshape=reshape)
 #  train = DataSet(sampled_train_images, sampled_train_labels, dtype=dtype, reshape=reshape)
   train = DataSet(new_data, new_labels, dtype=dtype, reshape=reshape)
@@ -217,6 +217,8 @@ def read_data_sets(train_dir,
                        validation_labels,
                        dtype=dtype,
                        reshape=reshape)
+  print(new_data.shape, new_labels.shape)
+  print("=================================================================")
   return base.Datasets(train=train, validation=validation, test=None)
 
 def load_mnist(train_dir='MNIST-data', worker_id=-1, n_workers=-1):
@@ -228,6 +230,95 @@ def down_sample(data_set=None, labels=None, down_sample_num=None):
   down_sample_labels = np.take(labels, down_sample_indices)
   return down_samples, down_sample_labels
 
+def add_noise_wrt_distance(batch, crop_shape, padding=None):
+  oshape = np.shape(batch[0])
+  if padding:
+    oshape = (oshape[0] + 2*padding, oshape[1] + 2*padding)
+  new_batch = []
+  npad = ((padding, padding), (padding, padding), (0, 0))
+  var_list = []
+  for i in range(len(batch)):
+    new_batch.append(batch[i])
+    if padding:
+      new_batch[i] = np.lib.pad(batch[i], pad_width=npad,
+                          mode='constant', constant_values=0)
+    nh = random.randint(0, oshape[0] - crop_shape[0])
+    nw = random.randint(0, oshape[1] - crop_shape[1])
+    new_batch[i] = new_batch[i][nh:nh + crop_shape[0],
+                              nw:nw + crop_shape[1]]
+    r = np.linalg.norm(np.subtract(batch[i], new_batch[i]))
+    var_list.append(r)
+  std_var_list = np.array(var_list) / np.linalg.norm(np.array(var_list))
+  for i in range(len(std_var_list)):
+    std_var_list[i] = std_var_list[i] * 10
+  for i in range(len(batch)):
+    gaussian_noise = np.random.normal(0, std_var_list[i], (batch[i].shape[0], batch[i].shape[1], batch[i].shape[2]))
+    new_batch[i] = new_batch[i] + gaussian_noise
+  return np.array(new_batch)
+
+def split_subset_wrt_labels(ori_data, ori_labels):
+    split_index_table = [[i/10] for i in range(10)]
+    split_data_table = []
+    for label_idx, label in enumerate(ori_labels):
+        split_index_table[int(label)].append(label_idx)
+    for idx in range(10):
+       data_per_label = np.take(ori_data, split_index_table[idx][1:], axis=0)
+       split_data_table.append(data_per_label)
+    return split_data_table
+
+def search_data_in_line(data_point=None, other_label_data=None, num_per_label=1, fraction=0.1):
+    sample_index = np.random.randint(low=0, high=other_label_data.shape[0], size=num_per_label)
+    sampled_data = np.take(other_label_data, sample_index, axis=0)
+    new_data_points = []
+    for sampled_data_point in sampled_data:
+        # calculate epsilon first
+        epsilon = fraction * (np.linalg.norm(data_point)/float(np.linalg.norm(sampled_data_point)))
+        #print(np.linalg.norm(data_point)-float(np.linalg.norm(sampled_data_point)))
+        # generate new data points
+        #print(np.linalg.norm(np.multiply(data_point, 1- epsilon)))
+        #print(np.linalg.norm(np.multiply(data_point, 1- epsilon)+np.multiply(sampled_data_point, epsilon)))
+        new_data_points.append(np.multiply(data_point, 1- epsilon)+np.multiply(sampled_data_point, epsilon))
+#        new_data_points.append(data_point)
+    return new_data_points
+
+def line_among_labels(ori_data, ori_labels, num_per_label=1, fraction=0.1):
+    split_data_table=split_subset_wrt_labels(ori_data, ori_labels)
+    new_train_set = []
+    new_train_labels = []
+    for dp_idx, data_point in enumerate(ori_data):
+        ori_data_label = ori_labels[dp_idx]
+        for i in range(10):
+            if i == ori_data_label:
+                continue
+            else:
+                new_data_points=search_data_in_line(data_point=data_point, other_label_data=split_data_table[i], num_per_label=num_per_label, fraction=fraction)
+                for n_d_p in new_data_points:
+                    new_train_set.append(n_d_p)
+                    new_train_labels.append(ori_labels[dp_idx])
+    return np.array(new_train_set), np.array(new_train_labels)
+
+def aug_data_set(ori_data, ori_labels, times_expand=1, aug_type="crop"):
+    aug_data_list = []
+    new_data=ori_data
+    new_label=ori_labels
+    for time_aug in range(times_expand):
+        if aug_type == 'crop':
+            crop_data = add_noise_wrt_distance(ori_data, crop_shape=(28, 28), padding=1)
+        elif aug_type == 'line_among_labels':
+            crop_data, new_train_labels = line_among_labels(ori_data, ori_labels, num_per_label=1, fraction=0.15)
+        elif aug_type == 'fake':
+            # this is only used for debug
+            crop_data = ori_data
+        aug_data_list.append(crop_data)
+        new_data = np.concatenate((new_data,aug_data_list[time_aug]),axis=0)
+        if aug_type == 'crop':
+            new_label = np.concatenate((new_label,ori_labels), axis=0)
+        elif aug_type == 'line_among_labels':
+            new_label = np.concatenate((new_label,new_train_labels), axis=0)
+        elif aug_type == 'fake':
+            new_label = np.concatenate((new_label,ori_labels), axis=0)
+    return new_data, new_label
+'''
 def aug_data_set(ori_data, ori_labels, times_expand=1):
   aug_data_list = []
   new_data=ori_data
@@ -238,6 +329,7 @@ def aug_data_set(ori_data, ori_labels, times_expand=1):
     new_data = np.concatenate((new_data,aug_data_list[time_aug]),axis=0)
     new_label = np.concatenate((new_label,ori_labels), axis=0)
   return new_data, new_label
+'''
 
 def random_crop(batch, crop_shape, padding=None):
   oshape = np.shape(batch[0])
