@@ -197,15 +197,67 @@ def add_noise_wrt_distance(batch, crop_shape, padding=None):
 #    new_batch[i] = new_batch[i] + gaussian_noise
   return np.array(new_batch)
 
-def aug_data_set(ori_data, ori_labels, times_expand=1):
+def split_subset_wrt_labels(ori_data, ori_labels):
+    split_index_table = [[i/10] for i in range(10)]
+    split_data_table = []
+    for label_idx, label in enumerate(ori_labels):
+        split_index_table[int(label)].append(label_idx)
+    for idx in range(10):
+       data_per_label = np.take(ori_data, split_index_table[idx][1:], axis=0)
+       split_data_table.append(data_per_label)
+    return split_data_table
+
+def search_data_in_line(data_point=None, other_label_data=None, num_per_label=1, fraction=0.1):
+    sample_index = np.random.randint(low=0, high=other_label_data.shape[0], size=num_per_label)
+    sampled_data = np.take(other_label_data, sample_index, axis=0)
+    new_data_points = []
+    for sampled_data_point in sampled_data:
+        # calculate epsilon first
+        epsilon = fraction * (np.linalg.norm(data_point)/float(np.linalg.norm(sampled_data_point)))
+        #print(np.linalg.norm(data_point)-float(np.linalg.norm(sampled_data_point)))
+        # generate new data points
+        #print(np.linalg.norm(np.multiply(data_point, 1- epsilon)))
+        #print(np.linalg.norm(np.multiply(data_point, 1- epsilon)+np.multiply(sampled_data_point, epsilon)))
+        new_data_points.append(np.multiply(data_point, 1- epsilon)+np.multiply(sampled_data_point, epsilon))
+#        new_data_points.append(data_point)
+    return new_data_points
+
+def line_among_labels(ori_data, ori_labels, num_per_label=1, fraction=0.1):
+    split_data_table=split_subset_wrt_labels(ori_data, ori_labels)
+    new_train_set = []
+    new_train_labels = []
+    for dp_idx, data_point in enumerate(ori_data):
+        ori_data_label = ori_labels[dp_idx]
+        for i in range(10):
+            if i == ori_data_label:
+                continue
+            else:
+                new_data_points=search_data_in_line(data_point=data_point, other_label_data=split_data_table[i], num_per_label=num_per_label, fraction=fraction)
+                for n_d_p in new_data_points:
+                    new_train_set.append(n_d_p)
+                    new_train_labels.append(ori_labels[dp_idx])
+    return np.array(new_train_set), np.array(new_train_labels)
+
+def aug_data_set(ori_data, ori_labels, times_expand=1, aug_type="crop"):
     aug_data_list = []
     new_data=ori_data
     new_label=ori_labels
     for time_aug in range(times_expand):
-        crop_data = add_noise_wrt_distance(ori_data, crop_shape=(32, 32), padding=1)   
+        if aug_type == 'crop':
+            crop_data = add_noise_wrt_distance(ori_data, crop_shape=(32, 32), padding=1)
+        elif aug_type == 'line_among_labels':
+            crop_data, new_train_labels = line_among_labels(ori_data, ori_labels, num_per_label=1, fraction=0.05)
+        elif aug_type == 'fake':
+            # this is only used for debug
+            crop_data = ori_data
         aug_data_list.append(crop_data)
         new_data = np.concatenate((new_data,aug_data_list[time_aug]),axis=0)
-        new_label = np.concatenate((new_label,ori_labels), axis=0)
+        if aug_type == 'crop':
+            new_label = np.concatenate((new_label,ori_labels), axis=0)
+        elif aug_type == 'line_among_labels':
+            new_label = np.concatenate((new_label,new_train_labels), axis=0)
+        elif aug_type == 'fake':
+            new_label = np.concatenate((new_label,ori_labels), axis=0)
     return new_data, new_label
 
 def down_sample(data_set=None, labels=None, down_sample_num=None):
@@ -229,10 +281,14 @@ def prepare_train_data(padding_size):
 #    pad_width = ((0, 0), (padding_size, padding_size), (padding_size, padding_size), (0, 0))
 #    data = np.pad(data, pad_width=pad_width, mode='constant', constant_values=0)
     sampled_train_images, sampled_train_labels = down_sample(data, label, down_sample_num=1024)
-    train_set_new, train_labels_new = aug_data_set(sampled_train_images, sampled_train_labels, times_expand=8)
+    train_set_new, train_labels_new = aug_data_set(sampled_train_images, sampled_train_labels, times_expand=1, aug_type='line_among_labels')    
+    print(train_set_new.shape, train_labels_new.shape)
+    print("==============================================================")
+    order = np.random.permutation(train_set_new.shape[0])
+    train_set_new = train_set_new[order, ...]
+    train_labels_new = train_labels_new[order]
     return train_set_new, train_labels_new
 #    return sampled_train_images, sampled_train_labels
-#    return data, label
 
 def read_validation_data():
     '''
