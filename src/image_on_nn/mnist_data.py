@@ -297,6 +297,7 @@ def line_among_labels(ori_data, ori_labels, num_per_label=1, fraction=0.1):
                     new_train_labels.append(ori_labels[dp_idx])
     return np.array(new_train_set), np.array(new_train_labels)
 
+# with original data batch added into the augmented dataset
 def aug_data_set(ori_data, ori_labels, times_expand=1, aug_type="crop"):
     aug_data_list = []
     new_data=ori_data
@@ -318,6 +319,39 @@ def aug_data_set(ori_data, ori_labels, times_expand=1, aug_type="crop"):
         elif aug_type == 'fake':
             new_label = np.concatenate((new_label,ori_labels), axis=0)
     return new_data, new_label
+
+
+# without original data batch added into the augmented dataset
+'''
+def aug_data_set(ori_data, ori_labels, times_expand=1, aug_type="crop"):
+    aug_data_list = []
+#    new_data=ori_data
+#    new_label=ori_labels
+    for time_aug in range(times_expand):
+        if aug_type == 'crop':
+            crop_data = add_noise_wrt_distance(ori_data, crop_shape=(28, 28), padding=1)
+        elif aug_type == 'line_among_labels':
+            crop_data, new_train_labels = line_among_labels(ori_data, ori_labels, num_per_label=1, fraction=0.15)
+        elif aug_type == 'fake':
+            # this is only used for debug
+            crop_data = ori_data
+        aug_data_list.append(crop_data)
+        if time_aug == 0:
+            new_data = aug_data_list[time_aug]
+            if aug_type == "crop":
+                new_label = ori_labels
+            elif aug_type == "line_among_labels":
+                new_label = new_train_labels
+        else:
+            new_data = np.concatenate((new_data,aug_data_list[time_aug]),axis=0)
+            if aug_type == 'crop':
+                new_label = np.concatenate((new_label,ori_labels), axis=0)
+            elif aug_type == 'line_among_labels':
+                new_label = np.concatenate((new_label,new_train_labels), axis=0)
+            elif aug_type == 'fake':
+                new_label = np.concatenate((new_label,ori_labels), axis=0)
+    return new_data, new_label
+'''
 '''
 def aug_data_set(ori_data, ori_labels, times_expand=1):
   aug_data_list = []
