@@ -207,7 +207,11 @@ def read_data_sets(train_dir,
   validation_labels = test_labels
   train_images = train_images
   train_labels = train_labels
-  sampled_train_images, sampled_train_labels = down_sample(train_images, train_labels, down_sample_num=1024)
+  train_images_binary, train_labels_binary, test_images_binary, test_labels_binary = extract_for_binary(train_set=train_images, 
+                                                                                          train_labels=train_labels, 
+                                                                                          test_set=test_images, 
+                                                                                          test_labels=test_labels)
+  sampled_train_images, sampled_train_labels = down_sample(train_images_binary, train_labels_binary, down_sample_num=1024)
   new_data, new_labels = aug_data_set(sampled_train_images, sampled_train_labels, times_expand=1, aug_type='noise')
 #  train = DataSet(train_images, train_labels, dtype=dtype, reshape=reshape)
 #  train = DataSet(sampled_train_images, sampled_train_labels, dtype=dtype, reshape=reshape)
@@ -281,12 +285,13 @@ def search_data_in_line(data_point=None, other_label_data=None, num_per_label=1,
     return new_data_points
 
 def line_among_labels(ori_data, ori_labels, num_per_label=1, fraction=0.1):
+    label_range = [6, 8]
     split_data_table=split_subset_wrt_labels(ori_data, ori_labels)
     new_train_set = []
     new_train_labels = []
     for dp_idx, data_point in enumerate(ori_data):
         ori_data_label = ori_labels[dp_idx]
-        for i in range(10):
+        for i in label_range:
             if i == ori_data_label:
                 continue
             else:
@@ -373,3 +378,18 @@ def random_crop(batch, crop_shape, padding=None):
     new_batch[i] = new_batch[i][nh:nh + crop_shape[0],
                               nw:nw + crop_shape[1]]
   return np.array(new_batch)
+
+def extract_for_binary(train_set=None, train_labels=None, test_set=None, test_labels=None):
+  binary_indices_train = []
+  binary_indices_test = []
+  for i in range(len(train_set)):
+    if train_labels[i] == 6 or train_labels[i] == 8:
+      binary_indices_train.append(i)
+  for i in range(len(test_set)):
+    if test_labels[i] == 6 or test_labels[i] == 8:
+      binary_indices_test.append(i)
+  train_set_binary = np.take(train_set, binary_indices_train, axis=0)
+  train_label_binary = np.take(train_labels, binary_indices_train)
+  test_set_binary = np.take(test_set, binary_indices_test, axis=0)
+  test_label_binary = np.take(test_labels, binary_indices_test)
+  return train_set_binary, train_label_binary, test_set_binary, test_label_binary
