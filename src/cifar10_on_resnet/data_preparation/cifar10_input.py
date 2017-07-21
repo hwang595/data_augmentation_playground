@@ -197,6 +197,12 @@ def add_noise_wrt_distance(batch, crop_shape, padding=None):
 #    new_batch[i] = new_batch[i] + gaussian_noise
   return np.array(new_batch)
 
+def add_random_flip_leftright(batch):
+    for i in range(len(batch)):
+        if bool(random.getrandbits(1)):
+            batch[i] = np.fliplr(batch[i])
+    return batch
+
 def split_subset_wrt_labels(ori_data, ori_labels):
     split_index_table = [[i/10] for i in range(10)]
     split_data_table = []
@@ -238,6 +244,7 @@ def line_among_labels(ori_data, ori_labels, num_per_label=1, fraction=0.1):
                     new_train_labels.append(ori_labels[dp_idx])
     return np.array(new_train_set), np.array(new_train_labels)
 
+'''
 def aug_data_set(ori_data, ori_labels, times_expand=1, aug_type="crop"):
     aug_data_list = []
     new_data=ori_data
@@ -258,6 +265,39 @@ def aug_data_set(ori_data, ori_labels, times_expand=1, aug_type="crop"):
             new_label = np.concatenate((new_label,new_train_labels), axis=0)
         elif aug_type == 'fake':
             new_label = np.concatenate((new_label,ori_labels), axis=0)
+    return new_data, new_label
+'''
+
+# without original data batch added into the augmented dataset
+def aug_data_set(ori_data, ori_labels, times_expand=1, aug_type="crop"):
+    aug_data_list = []
+#    new_data=ori_data
+#    new_label=ori_labels
+    for time_aug in range(times_expand):
+        if aug_type == 'crop':
+            crop_data = add_noise_wrt_distance(ori_data, crop_shape=(28, 28), padding=1)
+        elif aug_type == 'line_among_labels':
+            crop_data, new_train_labels = line_among_labels(ori_data, ori_labels, num_per_label=1, fraction=0.15)
+        elif aug_type == "noise":
+            crop_data = add_gaussian_noise(ori_data, mean=0, var=0.01)
+        elif aug_type == 'fake':
+            # this is only used for debug
+            crop_data = ori_data
+        elif aug_type == 'flip_lr':
+            crop_data = add_random_flip_leftright(ori_data)
+        aug_data_list.append(crop_data)
+        if time_aug == 0:
+            new_data = aug_data_list[time_aug]
+            if aug_type == "crop" or 'fake' or 'noise' or 'flip_lr':
+                new_label = ori_labels
+            elif aug_type == "line_among_labels":
+                new_label = new_train_labels
+        else:
+            new_data = np.concatenate((new_data,aug_data_list[time_aug]),axis=0)
+            if aug_type == 'crop' or 'fake' or 'noise' or 'flip_lr':
+                new_label = np.concatenate((new_label,ori_labels), axis=0)
+            elif aug_type == 'line_among_labels':
+                new_label = np.concatenate((new_label,new_train_labels), axis=0)
     return new_data, new_label
 
 def down_sample(data_set=None, labels=None, down_sample_num=None):
@@ -281,7 +321,7 @@ def prepare_train_data(padding_size):
 #    pad_width = ((0, 0), (padding_size, padding_size), (padding_size, padding_size), (0, 0))
 #    data = np.pad(data, pad_width=pad_width, mode='constant', constant_values=0)
     sampled_train_images, sampled_train_labels = down_sample(data, label, down_sample_num=1024)
-    train_set_new, train_labels_new = aug_data_set(sampled_train_images, sampled_train_labels, times_expand=1, aug_type='line_among_labels')    
+    train_set_new, train_labels_new = aug_data_set(sampled_train_images, sampled_train_labels, times_expand=1, aug_type='flip_lr')    
     print(train_set_new.shape, train_labels_new.shape)
     print("==============================================================")
     order = np.random.permutation(train_set_new.shape[0])
