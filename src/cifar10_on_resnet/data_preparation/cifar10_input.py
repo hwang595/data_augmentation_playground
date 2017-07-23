@@ -145,7 +145,7 @@ def random_crop_and_flip(batch_data, padding_size):
         cropped_batch[i, ...] = batch_data[i, ...][x_offset:x_offset+IMG_HEIGHT,
                       y_offset:y_offset+IMG_WIDTH, :]
 
-        cropped_batch[i, ...] = horizontal_flip(image=cropped_batch[i, ...], axis=1)
+#        cropped_batch[i, ...] = horizontal_flip(image=cropped_batch[i, ...], axis=1)
 
     return cropped_batch
 
@@ -164,8 +164,6 @@ def random_crop(batch, crop_shape, padding=None):
     nw = random.randint(0, oshape[1] - crop_shape[1])
     new_batch[i] = new_batch[i][nh:nh + crop_shape[0],
                               nw:nw + crop_shape[1]]
-    r = np.linalg.norm(np.subtract(batch[i], new_batch[i]))
-    new_batch[i]=random_noise(img, mode='gaussian', var=r)
   return np.array(new_batch)
 
 def add_noise_wrt_distance(batch, crop_shape, padding=None):
@@ -275,7 +273,8 @@ def aug_data_set(ori_data, ori_labels, times_expand=1, aug_type="crop"):
 #    new_label=ori_labels
     for time_aug in range(times_expand):
         if aug_type == 'crop':
-            crop_data = add_noise_wrt_distance(ori_data, crop_shape=(28, 28), padding=1)
+#            crop_data = random_crop(ori_data, crop_shape=(32, 32), padding=1)
+            crop_data = random_crop_and_flip(batch_data=ori_data, padding_size=2)
         elif aug_type == 'line_among_labels':
             crop_data, new_train_labels = line_among_labels(ori_data, ori_labels, num_per_label=1, fraction=0.15)
         elif aug_type == "noise":
@@ -288,13 +287,13 @@ def aug_data_set(ori_data, ori_labels, times_expand=1, aug_type="crop"):
         aug_data_list.append(crop_data)
         if time_aug == 0:
             new_data = aug_data_list[time_aug]
-            if aug_type == "crop" or 'fake' or 'noise' or 'flip_lr':
+            if aug_type == "crop" or aug_type == 'fake' or aug_type == 'noise' or aug_type == 'flip_lr':
                 new_label = ori_labels
             elif aug_type == "line_among_labels":
                 new_label = new_train_labels
         else:
             new_data = np.concatenate((new_data,aug_data_list[time_aug]),axis=0)
-            if aug_type == 'crop' or 'fake' or 'noise' or 'flip_lr':
+            if aug_type == 'crop' or aug_type == 'fake' or aug_type == 'noise' or aug_type == 'flip_lr':
                 new_label = np.concatenate((new_label,ori_labels), axis=0)
             elif aug_type == 'line_among_labels':
                 new_label = np.concatenate((new_label,new_train_labels), axis=0)
@@ -318,15 +317,15 @@ def prepare_train_data(padding_size):
         path_list.append(full_data_dir + str(i))
     data, label = read_in_all_images(path_list, is_random_label=TRAIN_RANDOM_LABEL)
     data = whitening_image(data)
-#    pad_width = ((0, 0), (padding_size, padding_size), (padding_size, padding_size), (0, 0))
-#    data = np.pad(data, pad_width=pad_width, mode='constant', constant_values=0)
-    sampled_train_images, sampled_train_labels = down_sample(data, label, down_sample_num=1024)
-    train_set_new, train_labels_new = aug_data_set(sampled_train_images, sampled_train_labels, times_expand=1, aug_type='flip_lr')    
+    pad_width = ((0, 0), (padding_size, padding_size), (padding_size, padding_size), (0, 0))
+    data = np.pad(data, pad_width=pad_width, mode='constant', constant_values=0)
+#    sampled_train_images, sampled_train_labels = down_sample(data, label, down_sample_num=1024)
+    train_set_new, train_labels_new = aug_data_set(data, label, times_expand=1, aug_type='crop')    
     print(train_set_new.shape, train_labels_new.shape)
     print("==============================================================")
-    order = np.random.permutation(train_set_new.shape[0])
-    train_set_new = train_set_new[order, ...]
-    train_labels_new = train_labels_new[order]
+#    order = np.random.permutation(train_set_new.shape[0])
+#    train_set_new = train_set_new[order, ...]
+#    train_labels_new = train_labels_new[order]
     return train_set_new, train_labels_new
 #    return sampled_train_images, sampled_train_labels
 
@@ -420,8 +419,9 @@ def generate_augment_train_batch(train_data, train_labels, train_batch_size, loc
       local_data_batch_idx = train_batch_size
       assert train_batch_size <= num_of_instances
     end = local_data_batch_idx
-    train_batch = train_data[start:end]
+    train_batch_tmp = train_data[start:end]
 #    train_batch = whitening_image(random_crop_and_flip(train_batch_tmp, padding_size=FLAGS.padding_size))
+    train_batch = whitening_image(train_batch_tmp)
     batch_labels = train_labels[start:end]
 #    tf.logging.info("Batch shapes %s" % str(train_batch.shape))
 #    tf.logging.info("Standardized batch shapes %s" % str(whitening_image(train_batch).shape))

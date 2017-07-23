@@ -26,7 +26,7 @@ FLAGS = tf.app.flags.FLAGS
 
 def main(_):
   cifar10.maybe_download_and_extract()
-  train_set, train_labels = cifar10.prepare_train_data(padding_size=0)
+  train_set, train_labels = cifar10.prepare_train_data(padding_size=2)
   # do some debugging tests here
   #print(train_set.shape, train_labels.shape)
   #print("==========================================")
