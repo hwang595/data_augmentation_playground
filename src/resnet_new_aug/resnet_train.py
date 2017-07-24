@@ -107,7 +107,7 @@ RMSPROP_DECAY = 0.9                # Decay term for RMSProp.
 RMSPROP_MOMENTUM = 0.9             # Momentum in RMSProp.
 RMSPROP_EPSILON = 1.0              # Epsilon term for RMSProp.
 
-def train(training_set, training_labels):
+def train(training_set, training_labels, sampled_train_images, sampled_train_labels):
   """Train on dataset for a number of steps."""
   with tf.Graph().as_default(), tf.device('/gpu:0'):
     # Create a variable to count the number of train() calls. This equals the
@@ -184,7 +184,7 @@ def train(training_set, training_labels):
     tf.train.start_queue_runners(sess=sess)
     for step in range(FLAGS.max_steps):
       # change the API for new aug method
-      epoch_counter, local_data_batch_idx, feed_dict = cifar10.fill_feed_dict(
+      training_set, training_labels, epoch_counter, local_data_batch_idx, feed_dict = cifar10.fill_feed_dict(
                 training_set, 
                 training_labels, 
                 images, 
@@ -192,7 +192,8 @@ def train(training_set, training_labels):
                 FLAGS.batch_size, 
                 local_data_batch_idx, 
                 epoch_counter,
-                FLAGS.init_lr, lr_placeholder)
+                FLAGS.init_lr, lr_placeholder,
+                sampled_train_images, sampled_train_labels)
 
       start_time = time.time()
       _, loss_value, acc = sess.run([train_op, total_loss, validation_accuracy], feed_dict=feed_dict)
