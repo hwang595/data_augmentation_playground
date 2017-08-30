@@ -9,6 +9,11 @@ from sklearn.utils import check_array
 from sklearn.preprocessing import LabelBinarizer, label_binarize
 from sklearn.utils import check_consistent_length
 
+from random_sample_points import rand_point_generator, get_transformation
+
+SEED_ = 42
+ANGLE_ = -45
+
 def _weighted_sum(sample_score, sample_weight, normalize=False):
     if normalize:
         return np.average(sample_score, weights=sample_weight)
@@ -72,10 +77,24 @@ def log_loss(w):
     normalize=True
     sample_weight=None
     labels=None
-    # define labels here:
-    X = np.array([[0,2], [2, 0]])
-    y_true=np.array([1,0])
-    y_pred= np.dot(np.transpose(w), X)
+    # define labels here
+    np.random.seed(seed=SEED_)
+    pos_data_points, neg_data_points=rand_point_generator(point_num=50)
+    #==================================================================
+    rotation_matrix = get_transformation(angle=ANGLE_)
+    pos_transformed = np.dot(pos_data_points[:,0:2], rotation_matrix)
+    neg_transformed = np.dot(neg_data_points[:,0:2], rotation_matrix)
+    #==================================================================
+    dataset = np.concatenate((pos_data_points, neg_data_points), axis=0)
+    X = np.concatenate((pos_transformed, neg_transformed), axis=0)
+    #X = dataset[:, 0:2]
+    y_true = dataset[:, -1]
+#    X = np.array([[0,2], [2, 0]])
+#    y_true=np.array([1,0])
+#    y_true=np.array([1,-1])
+    y_pred = np.zeros(X.shape[0])
+    for i in range(X.shape[0]):
+        y_pred[i]= np.dot(np.transpose(w), X[i])
 
     y_pred = check_array(y_pred, ensure_2d=False)
     check_consistent_length(y_pred, y_true)
